@@ -21,7 +21,7 @@ export function Pagination({
   const showRightEllipsis = currentPage < totalPages - 2;
 
   const getPageNumbers = () => {
-    const pages = [];
+    const pages: number[] = [];
 
     if (totalPages <= 5) {
       for (let i = 1; i <= totalPages; i++) {

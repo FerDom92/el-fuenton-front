@@ -1,129 +1,160 @@
 "use client";
 
-import AddClientDialog from "@/components/pages/clientes/AddClientDialog";
-import ClientTable from "@/components/pages/clientes/ClientTable";
-import DeleteClientDialog from "@/components/pages/clientes/DeleteClientDialog";
-import EditClientDialog from "@/components/pages/clientes/EditClientDialog";
-import { ErrorMessage } from "@/components/ui/ErrorMessage";
-import { Cliente } from "@/entities/Cliente";
-import { useToast } from "@/hooks/useToast";
-import { faker } from "@faker-js/faker";
-import { isUndefined } from "lodash";
-import { useEffect, useState } from "react";
+import { CrudPageLayout } from "@/components/crud/CrudPageLayout";
+import { DeleteConfirmDialog } from "@/components/crud/DeleteConfirmDialog";
+import { GenericDialog } from "@/components/crud/GenericDialog";
+import { ColumnConfig, GenericTable } from "@/components/crud/GenericTable";
+import { ClientForm } from "@/components/pages/ventas/ClientForm";
+import { useClientCrud } from "@/hooks/clients/useClientsCrud";
+import { useDebounce } from "@/hooks/useDebounce";
+import { Client, ClientDTO } from "@/types/client.types";
+import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 
-// Datos de ejemplo
-const clientesIniciales: Cliente[] = Array.from({ length: 50 }, (_, i) => ({
-  id: i + 1,
-  nombre: faker.person.fullName(),
-  email: faker.internet.email(),
-  telefono: faker.phone.number(),
-}));
+const ITEMS_PER_PAGE = 10;
 
-export default function Clientes() {
-  const [clientes, setClientes] = useState<Cliente[]>();
-  const [editingClient, setEditingClient] = useState<Cliente | null>(null);
+export default function ClientsPage() {
+  const searchParams = useSearchParams();
+  const page = Number(searchParams.get("page")) || 1;
+  const search = searchParams.get("search") || "";
+  const debouncedSearch = useDebounce(search, 1000);
+
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [newClient, setNewClient] = useState<Omit<Cliente, "id">>({
-    nombre: "",
-    email: "",
-    telefono: "",
+
+  const {
+    clients,
+    totalPages,
+    isLoading,
+    isError,
+    createClient,
+    updateClient,
+    deleteClient,
+  } = useClientCrud({
+    page,
+    limit: ITEMS_PER_PAGE,
+    search: debouncedSearch,
   });
-  const [isLoading, setIsLoading] = useState(true);
-  const toast = useToast();
 
-  useEffect(() => {
-    setClientes(clientesIniciales);
-    setIsLoading(false);
-  }, []);
+  if (isError) return <div>Ha ocurrido un error</div>;
 
-  if (isUndefined(clientes)) return <ErrorMessage />;
+  const clientColumns: ColumnConfig<Client>[] = [
+    {
+      accessor: "name",
+      header: "Nombre",
+      size: 20,
+    },
+    {
+      accessor: "lastName",
+      header: "Apellido",
+      size: 15,
+    },
+    {
+      accessor: "email",
+      header: "Detalle",
+      size: 50,
+    },
+  ];
 
-  const handleAddConfirm = () => {
-    toast.toast({
-      title: "Cliente añadido",
-      description: "El nuevo cliente ha sido añadido correctamente.",
-    });
-    setClientes([{ id: clientes.length + 1, ...newClient }, ...clientes]);
-    setNewClient({ nombre: "", email: "", telefono: "" });
-    setIsAddDialogOpen(false);
-  };
+  const handleAdd = () => setIsAddDialogOpen(true);
 
   const handleEdit = (id: number) => {
-    const clientToEdit = clientes.find((c) => c.id === id);
+    const clientToEdit = clients.find((p: ClientDTO) => p.id === id);
     if (clientToEdit) {
-      setEditingClient(clientToEdit);
+      setSelectedClient(clientToEdit);
       setIsEditDialogOpen(true);
     }
   };
 
-  const handleEditConfirm = () => {
-    if (editingClient) {
-      toast.toast({
-        title: "Cliente actualizado",
-        description: "Los cambios se han guardado correctamente.",
-      });
-      setClientes(
-        clientes.map((c) => (c.id === editingClient.id ? editingClient : c))
-      );
+  const handleDelete = (id: number) => {
+    const clientToDelete = clients.find((p: ClientDTO) => p.id === id);
+    if (clientToDelete) {
+      setSelectedClient(clientToDelete);
+      setIsDeleteDialogOpen(true);
+    }
+  };
+
+  const handleAddSubmit = (data: ClientDTO) => {
+    createClient(data);
+    setIsAddDialogOpen(false);
+  };
+
+  const handleEditSubmit = (data: ClientDTO) => {
+    if (selectedClient) {
+      updateClient({ ...data, id: selectedClient.id });
       setIsEditDialogOpen(false);
     }
   };
 
-  const handleDelete = (id: number) => {
-    setEditingClient(clientes.find((c) => c.id === id) || null);
-    setIsDeleteDialogOpen(true);
-  };
-
   const handleDeleteConfirm = () => {
-    if (editingClient) {
-      toast.toast({
-        title: "Cliente eliminado",
-        description: "El cliente ha sido eliminado correctamente.",
-      });
-      setClientes(clientes.filter((c) => c.id !== editingClient.id));
+    if (selectedClient) {
+      deleteClient(selectedClient);
       setIsDeleteDialogOpen(false);
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Clientes</h1>
-      </div>
-      <ClientTable
-        clientes={clientes}
-        isLoading={isLoading}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onOpenDialog={setIsAddDialogOpen}
-      />
-
-      {/* Add Client Dialog */}
-      <AddClientDialog
+    <CrudPageLayout
+      title="Clientes"
+      entities={clients}
+      isLoading={isLoading}
+      currentPage={page}
+      totalPages={totalPages}
+      searchValue={search}
+      onAddClick={handleAdd}
+      onEditClick={handleEdit}
+      onDeleteClick={handleDelete}
+      searchPlaceholder="Buscar Clientes..."
+      renderTable={({ entities, isLoading, onEdit, onDelete }) => (
+        <GenericTable
+          data={entities}
+          columns={clientColumns}
+          isLoading={isLoading}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
+      )}
+    >
+      <GenericDialog
+        title="Añadir Cliente"
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
-        newClient={newClient}
-        setNewClient={setNewClient}
-        onConfirm={handleAddConfirm}
-      />
+      >
+        <ClientForm
+          onSubmit={handleAddSubmit}
+          onCancel={() => setIsAddDialogOpen(false)}
+        />
+      </GenericDialog>
 
-      {/* Edit Client Dialog */}
-      <EditClientDialog
+      <GenericDialog
+        title="Editar Cliente"
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
-        editingClient={editingClient}
-        setEditingClient={setEditingClient}
-        onConfirm={handleEditConfirm}
-      />
+      >
+        <ClientForm
+          initialValues={
+            selectedClient
+              ? {
+                  name: selectedClient.name,
+                  lastName: selectedClient.lastName,
+                  email: selectedClient.email,
+                }
+              : undefined
+          }
+          onSubmit={handleEditSubmit}
+          onCancel={() => setIsEditDialogOpen(false)}
+        />
+      </GenericDialog>
 
-      {/* Delete Confirmation Dialog */}
-      <DeleteClientDialog
+      <DeleteConfirmDialog
+        entityName="Cliento"
+        entityDisplayName={selectedClient?.name}
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
       />
-    </div>
+    </CrudPageLayout>
   );
 }

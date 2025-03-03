@@ -1,209 +1,161 @@
 "use client";
 
-import {
-  AddProductDialog,
-  DeleteProductDialog,
-  EditProductDialog,
-} from "@/components/pages/productos/ProductDialogs";
-import ProductTable from "@/components/pages/productos/ProductTable";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Pagination } from "@/components/ui/pagination";
-import { Producto } from "@/entities/Producto";
-import useCreateProducto from "@/hooks/productos/useCreateProducto";
-import useDeleteProducto from "@/hooks/productos/useDeleteProducto";
-import useEditProducto from "@/hooks/productos/useEditProducto";
-import useProductos from "@/hooks/productos/useProductos";
+import { CrudPageLayout } from "@/components/crud/CrudPageLayout";
+import { DeleteConfirmDialog } from "@/components/crud/DeleteConfirmDialog";
+import { GenericDialog } from "@/components/crud/GenericDialog";
+import { ColumnConfig, GenericTable } from "@/components/crud/GenericTable";
+import { useProductCrud } from "@/hooks/products/useProductCrud";
 import { useDebounce } from "@/hooks/useDebounce";
-import { useToast } from "@/hooks/useToast";
-import type { ProductFormValues } from "@/schemas/product.shema";
-import { Plus, SearchX } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useState } from "react";
+import { Product, ProductDTO } from "@/types/product.types";
+import { useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { ProductForm } from "../../components/pages/productos/ProductForm";
 
 const ITEMS_PER_PAGE = 10;
 
-export default function Productos() {
-  const { toast } = useToast();
-
-  const router = useRouter();
-  const pathname = usePathname();
+export default function ProductsPage() {
   const searchParams = useSearchParams();
-
   const page = Number(searchParams.get("page")) || 1;
   const search = searchParams.get("search") || "";
-
   const debouncedSearch = useDebounce(search, 1000);
 
-  const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const { productos, isLoading, isError } = useProductos({
+  const {
+    products,
+    totalPages,
+    isLoading,
+    isError,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+  } = useProductCrud({
     page,
     limit: ITEMS_PER_PAGE,
     search: debouncedSearch,
   });
 
-  const { onEditProducto } = useEditProducto();
-  const { onDeleteProducto } = useDeleteProducto();
-  const { onCreateProducto } = useCreateProducto();
-
-  const createQueryString = useCallback(
-    (params: Record<string, string | number | null>) => {
-      const current = new URLSearchParams(Array.from(searchParams.entries()));
-
-      for (const [key, value] of Object.entries(params)) {
-        if (value === null) {
-          current.delete(key);
-        } else {
-          current.set(key, String(value));
-        }
-      }
-
-      return current.toString();
-    },
-    [searchParams]
-  );
-
   if (isError) return <div>Ha ocurrido un error</div>;
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newSearch = e.target.value;
-    const queryString = createQueryString({
-      search: newSearch || null,
-      page: 1, // Reset a la primera página al buscar
-    });
-    router.push(`${pathname}?${queryString}`);
-  };
-
-  const handlePageChange = (newPage: number) => {
-    const queryString = createQueryString({ page: newPage });
-    router.push(`${pathname}?${queryString}`);
-  };
+  const productColumns: ColumnConfig<Product>[] = [
+    {
+      accessor: "nombre",
+      header: "Nombre",
+      size: 20,
+    },
+    {
+      accessor: "precio",
+      header: "Precio",
+      cell: (value) => `$${value}`,
+      size: 15,
+    },
+    {
+      accessor: "detalle",
+      header: "Detalle",
+      size: 50,
+    },
+  ];
 
   const handleAdd = () => setIsAddDialogOpen(true);
 
-  const handleClearFlilter = () => {
-    const queryString = createQueryString({
-      search: null,
-      page: 1, // Reset a la primera página al limpiar
-    });
-    router.push(`${pathname}?${queryString}`);
-  };
-
-  const handleAddSubmit = (data: ProductFormValues) => {
-    onCreateProducto(data);
-    setIsAddDialogOpen(false);
-    toast({
-      title: "Producto añadido",
-      description: "El nuevo producto ha sido añadido con éxito.",
-      duration: 2000,
-    });
-  };
-
   const handleEdit = (id: number) => {
-    const productToEdit = productos.find((p) => p.id === id);
+    const productToEdit = products.find((p: ProductDTO) => p.id === id);
     if (productToEdit) {
-      setEditingProduct(productToEdit);
+      setSelectedProduct(productToEdit);
       setIsEditDialogOpen(true);
     }
   };
 
-  const handleEditSubmit = (data: ProductFormValues) => {
-    if (editingProduct) {
-      onEditProducto({ ...data, id: editingProduct.id });
-      setIsEditDialogOpen(false);
-      toast({
-        title: "Producto actualizado",
-        description: "El producto ha sido actualizado con éxito.",
-        duration: 2000,
-      });
-    }
-  };
-
   const handleDelete = (id: number) => {
-    const productToDelete = productos.find((p) => p.id === id);
+    const productToDelete = products.find((p: ProductDTO) => p.id === id);
     if (productToDelete) {
-      setEditingProduct(productToDelete);
+      setSelectedProduct(productToDelete);
       setIsDeleteDialogOpen(true);
     }
   };
 
+  const handleAddSubmit = (data: ProductDTO) => {
+    createProduct(data);
+    setIsAddDialogOpen(false);
+  };
+
+  const handleEditSubmit = (data: ProductDTO) => {
+    if (selectedProduct) {
+      updateProduct({ ...data, id: selectedProduct.id });
+      setIsEditDialogOpen(false);
+    }
+  };
+
   const handleDeleteConfirm = () => {
-    if (editingProduct) {
-      onDeleteProducto(editingProduct);
+    if (selectedProduct) {
+      deleteProduct(selectedProduct);
       setIsDeleteDialogOpen(false);
-      toast({
-        title: "Producto eliminado",
-        description: "El producto ha sido eliminado con éxito.",
-      });
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Productos</h1>
-      </div>
-
-      <div className="flex justify-between">
-        <div className="flex gap-4 items-center">
-          <Input
-            placeholder="Buscar productos..."
-            value={search}
-            onChange={handleSearchChange}
-            className="w-96"
-          />
-
-          <Button onClick={handleClearFlilter} variant="outline">
-            <SearchX /> Limpiar filtro
-          </Button>
-        </div>
-        <div className="flex items-centerspace-x-2 justify-between">
-          <Button onClick={handleAdd}>
-            <Plus className="mr-2 h-4 w-4" /> Añadir Producto
-          </Button>
-        </div>
-      </div>
-
-      <ProductTable
-        productos={productos}
-        isLoading={isLoading}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
-
-      {productos.length > 0 && (
-        <div className="mt-4">
-          <Pagination
-            currentPage={page}
-            totalPages={10} //TODO: cambiar cuando venga del backend
-            onPageChange={handlePageChange}
-          />
-        </div>
+    <CrudPageLayout
+      title="Productos"
+      entities={products}
+      isLoading={isLoading}
+      currentPage={page}
+      totalPages={totalPages}
+      searchValue={search}
+      onAddClick={handleAdd}
+      onEditClick={handleEdit}
+      onDeleteClick={handleDelete}
+      searchPlaceholder="Buscar productos..."
+      renderTable={({ entities, isLoading, onEdit, onDelete }) => (
+        <GenericTable
+          data={entities}
+          columns={productColumns}
+          isLoading={isLoading}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       )}
-
-      <AddProductDialog
+    >
+      <GenericDialog
+        title="Añadir Producto"
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
-        onSubmit={handleAddSubmit}
-      />
+      >
+        <ProductForm
+          onSubmit={handleAddSubmit}
+          onCancel={() => setIsAddDialogOpen(false)}
+        />
+      </GenericDialog>
 
-      <EditProductDialog
+      <GenericDialog
+        title="Editar Producto"
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
-        product={editingProduct}
-        onSubmit={handleEditSubmit}
-      />
+      >
+        <ProductForm
+          initialValues={
+            selectedProduct
+              ? {
+                  nombre: selectedProduct.nombre,
+                  precio: selectedProduct.precio,
+                  detalle: selectedProduct.detalle,
+                }
+              : undefined
+          }
+          onSubmit={handleEditSubmit}
+          onCancel={() => setIsEditDialogOpen(false)}
+        />
+      </GenericDialog>
 
-      <DeleteProductDialog
+      <DeleteConfirmDialog
+        entityName="Producto"
+        entityDisplayName={selectedProduct?.nombre}
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
-        productName={editingProduct?.nombre}
       />
-    </div>
+    </CrudPageLayout>
   );
 }

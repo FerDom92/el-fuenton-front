@@ -14,5 +14,3 @@ export const productSchema = z.object({
     .min(1, "El detalle es requerido")
     .max(500, "El detalle no puede exceder 500 caracteres"),
 });
-
-export type ProductFormValues = z.infer<typeof productSchema>;

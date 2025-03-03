@@ -7,7 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { queryClient } from "@/lib/query-client";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { type ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import "./globals.css";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -20,10 +20,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <SidebarProvider>
               <div className="flex h-screen w-full bg-background text-foreground">
                 <Sidebar />
-                <main className="flex-1 overflow-y-auto p-8">
-                  <SidebarTrigger />
-                  {children}
-                </main>
+                <Suspense fallback={<p>Loading...</p>}>
+                  <main className="flex-1 overflow-y-auto p-8">
+                    <SidebarTrigger />
+                    {children}
+                  </main>
+                </Suspense>
               </div>
             </SidebarProvider>
           </ThemeProvider>

@@ -8,31 +8,30 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { productSchema } from "@/schemas/product.shema";
-import { ProductDTO } from "@/types/product.types";
+import { clientSchema } from "@/schemas/client.shema";
+import { ClientDTO } from "@/types/client.types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
-interface ProductFormProps {
-  initialValues?: ProductDTO;
-  onSubmit: (data: ProductDTO) => void;
+interface ClientFormProps {
+  initialValues?: ClientDTO;
+  onSubmit: (data: ClientDTO) => void;
   onCancel: () => void;
 }
 
-export function ProductForm({
+export function ClientForm({
   initialValues,
   onSubmit,
   onCancel,
-}: ProductFormProps) {
-  const defaultValues: ProductDTO = initialValues || {
-    nombre: "",
-    precio: 0,
-    detalle: "",
+}: ClientFormProps) {
+  const defaultValues: ClientDTO = initialValues || {
+    name: "",
+    lastName: "",
+    email: "",
   };
 
-  const form = useForm<ProductDTO>({
-    resolver: zodResolver(productSchema),
+  const form = useForm<ClientDTO>({
+    resolver: zodResolver(clientSchema),
     defaultValues,
   });
 
@@ -41,7 +40,7 @@ export function ProductForm({
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
         <FormField
           control={form.control}
-          name="nombre"
+          name="name"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Nombre</FormLabel>
@@ -55,15 +54,14 @@ export function ProductForm({
 
         <FormField
           control={form.control}
-          name="precio"
+          name="lastName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Precio</FormLabel>
+              <FormLabel>Apellido</FormLabel>
               <FormControl>
                 <Input
-                  type="number"
                   {...field}
-                  onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                  onChange={(e) => field.onChange(e.target.value)}
                 />
               </FormControl>
               <FormMessage />
@@ -73,12 +71,12 @@ export function ProductForm({
 
         <FormField
           control={form.control}
-          name="detalle"
+          name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Detalle</FormLabel>
+              <FormLabel>Email</FormLabel>
               <FormControl>
-                <Textarea {...field} />
+                <Input type="email" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
