@@ -11,7 +11,6 @@ pages:
     - productos vendidos
   - productos
     -  productos/:id
-  - clientes
   - ventas
     - add products to sell detail
     - sumar el total de los productos o anotar el total manualmente
