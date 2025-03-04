@@ -53,7 +53,7 @@ export default function ClientsPage() {
     },
     {
       accessor: "email",
-      header: "Detalle",
+      header: "Email",
       size: 50,
     },
   ];
@@ -61,7 +61,7 @@ export default function ClientsPage() {
   const handleAdd = () => setIsAddDialogOpen(true);
 
   const handleEdit = (id: number) => {
-    const clientToEdit = clients.find((p: ClientDTO) => p.id === id);
+    const clientToEdit = clients.find((p: Client) => p.id === id);
     if (clientToEdit) {
       setSelectedClient(clientToEdit);
       setIsEditDialogOpen(true);
@@ -69,7 +69,7 @@ export default function ClientsPage() {
   };
 
   const handleDelete = (id: number) => {
-    const clientToDelete = clients.find((p: ClientDTO) => p.id === id);
+    const clientToDelete = clients.find((p: Client) => p.id === id);
     if (clientToDelete) {
       setSelectedClient(clientToDelete);
       setIsDeleteDialogOpen(true);
@@ -149,7 +149,7 @@ export default function ClientsPage() {
       </GenericDialog>
 
       <DeleteConfirmDialog
-        entityName="Cliento"
+        entityName="Cliente"
         entityDisplayName={selectedClient?.name}
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}

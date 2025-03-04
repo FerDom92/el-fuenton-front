@@ -8,10 +8,26 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { clientSchema } from "@/schemas/client.shema";
 import { ClientDTO } from "@/types/client.types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { z } from "zod";
+
+const clientSchema = z.object({
+  name: z
+    .string()
+    .min(1, "El nombre es requerido")
+    .max(100, "El nombre no puede exceder 100 caracteres"),
+  lastName: z
+    .string()
+    .min(1, "Apellido es requerido")
+    .max(100, "El apellido no puede exceder los 100 caracteres"),
+  email: z
+    .string()
+    .email("El formato de email no es válido")
+    .min(1, "El email es requerido")
+    .max(255, "El email no puede exceder 255 caracteres"),
+});
 
 interface ClientFormProps {
   initialValues?: ClientDTO;
@@ -30,7 +46,7 @@ export function ClientForm({
     email: "",
   };
 
-  const form = useForm<ClientDTO>({
+  const form = useForm<z.infer<typeof clientSchema>>({
     resolver: zodResolver(clientSchema),
     defaultValues,
   });

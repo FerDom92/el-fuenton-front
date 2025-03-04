@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -23,7 +22,7 @@ import { Pencil, Trash } from "lucide-react";
 export interface ColumnConfig<T> {
   accessor: any;
   header: string;
-  cell?: (value: unknown) => React.ReactNode;
+  cell?: (value: unknown, row?: T) => React.ReactNode;
   size?: number;
 }
 
@@ -45,11 +44,12 @@ export function GenericTable<T extends BaseEntity>({
   const columnHelper = createColumnHelper<T>();
 
   const tableColumns = [
-    ...columns.map((col) =>
+    ...columns.map((col, colIndex) =>
       columnHelper.accessor(col.accessor as any, {
+        id: `col_${colIndex}`, // Use un ID único para cada columna
         cell: (info) =>
           col.cell ? (
-            col.cell(info.getValue())
+            col.cell(info.getValue(), info.row.original)
           ) : (
             <div
               className="truncate max-w-full"
@@ -63,6 +63,7 @@ export function GenericTable<T extends BaseEntity>({
       })
     ),
     columnHelper.accessor("id" as any, {
+      id: "actions",
       cell: (info) => (
         <div className="flex space-x-1">
           <Button
@@ -121,10 +122,10 @@ export function GenericTable<T extends BaseEntity>({
         <TableBody>
           {isLoading
             ? Array.from({ length: 10 }).map((_, index) => (
-                <TableRow key={index}>
+                <TableRow key={`skeleton_${index}`}>
                   {columns.map((_, colIndex) => (
                     <TableCell
-                      key={colIndex}
+                      key={`skeleton_cell_${index}_${colIndex}`}
                       style={{ width: `${_.size || 20}%` }}
                     >
                       <Skeleton className="h-4 w-full" />
@@ -136,7 +137,7 @@ export function GenericTable<T extends BaseEntity>({
                 </TableRow>
               ))
             : table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} style={{ height: "3rem" }}>
+                <TableRow key={`row_${row.id}`} style={{ height: "3rem" }}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}

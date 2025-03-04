@@ -15,20 +15,14 @@ export default function SidebarComponent() {
   return (
     <Sidebar className="border-r">
       <SidebarHeader className="border-b p-4">
-        <SidebarHeaderComponent
-          user={{
-            name: "Nombre Usuario",
-            email: "usuario@ejemplo.com",
-            imageUrl: "https://cdn-icons-png.flaticon.com/512/147/147144.png",
-          }}
-        />
+        <SidebarHeaderComponent />
       </SidebarHeader>
       <SidebarContent className="px-4 mt-4">
         <SidebarNavigationMenu />
       </SidebarContent>
       <SidebarDate />
       <SidebarFooter className="border-t p-4">
-        <SidebarFooterComponent onLogout={() => console.log("Logout")} />
+        <SidebarFooterComponent />
       </SidebarFooter>
     </Sidebar>
   );

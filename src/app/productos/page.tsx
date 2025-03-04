@@ -42,18 +42,18 @@ export default function ProductsPage() {
 
   const productColumns: ColumnConfig<Product>[] = [
     {
-      accessor: "nombre",
+      accessor: "name",
       header: "Nombre",
       size: 20,
     },
     {
-      accessor: "precio",
+      accessor: "price",
       header: "Precio",
       cell: (value) => `$${value}`,
       size: 15,
     },
     {
-      accessor: "detalle",
+      accessor: "detail",
       header: "Detalle",
       size: 50,
     },
@@ -62,7 +62,7 @@ export default function ProductsPage() {
   const handleAdd = () => setIsAddDialogOpen(true);
 
   const handleEdit = (id: number) => {
-    const productToEdit = products.find((p: ProductDTO) => p.id === id);
+    const productToEdit = products.find((p: Product) => p.id === id);
     if (productToEdit) {
       setSelectedProduct(productToEdit);
       setIsEditDialogOpen(true);
@@ -70,7 +70,7 @@ export default function ProductsPage() {
   };
 
   const handleDelete = (id: number) => {
-    const productToDelete = products.find((p: ProductDTO) => p.id === id);
+    const productToDelete = products.find((p: Product) => p.id === id);
     if (productToDelete) {
       setSelectedProduct(productToDelete);
       setIsDeleteDialogOpen(true);
@@ -138,9 +138,9 @@ export default function ProductsPage() {
           initialValues={
             selectedProduct
               ? {
-                  nombre: selectedProduct.nombre,
-                  precio: selectedProduct.precio,
-                  detalle: selectedProduct.detalle,
+                  name: selectedProduct.name,
+                  price: selectedProduct.price,
+                  detail: selectedProduct.detail,
                 }
               : undefined
           }
@@ -151,7 +151,7 @@ export default function ProductsPage() {
 
       <DeleteConfirmDialog
         entityName="Producto"
-        entityDisplayName={selectedProduct?.nombre}
+        entityDisplayName={selectedProduct?.name}
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}

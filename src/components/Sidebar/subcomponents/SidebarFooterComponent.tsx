@@ -1,22 +1,22 @@
 "use client";
 
+import { useAuth } from "@/context/auth-context"; // Importación actualizada
 import { LogOut, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
-interface SidebarFooterComponentProps {
-  onLogout: () => void;
-}
-
-export default function SidebarFooterComponent({
-  onLogout,
-}: SidebarFooterComponentProps) {
+export default function SidebarFooterComponent() {
   const { theme, setTheme } = useTheme();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+  };
 
   return (
     <div className="flex justify-between items-center">
       <button
         className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        onClick={onLogout}
+        onClick={handleLogout}
       >
         <LogOut className="mr-2 h-4 w-4 inline" />
         Cerrar sesión

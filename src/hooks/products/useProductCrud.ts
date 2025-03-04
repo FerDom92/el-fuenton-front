@@ -5,10 +5,9 @@ import { useDeleteEntity } from '../crud/useDeleteEntity';
 import { useFetchEntities } from '../crud/useFetchEntities';
 import { useUpdateEntity } from '../crud/useUpdateEntity';
 
-const ENDPOINT = '/producto';
+const ENDPOINT = '/product';
 const QUERY_KEY = 'productos';
 const ENTITY_NAME = 'Producto';
-
 
 export function useProductCrud(params: PaginationParams) {
   const config = {
