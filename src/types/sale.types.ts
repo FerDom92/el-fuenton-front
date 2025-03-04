@@ -14,7 +14,7 @@ export interface SaleItem {
 export interface Sale extends BaseEntity {
   date: string;
   client: Client;
-  clientId: number;
+  id: number;
   items: SaleItem[];
   total: number;
 }
@@ -27,3 +27,9 @@ export type SaleDTO = {
   }>;
   total?: number;
 };
+
+export interface SalesByDay {
+  day: Date;
+  total: number;
+  count: number;
+}

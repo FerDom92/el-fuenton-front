@@ -1,5 +1,6 @@
 import { useToast } from "@/hooks/useToast";
 import { baseApi } from "@/lib/api";
+import { AxiosError } from "axios";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
@@ -18,6 +19,11 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  register?: (
+    username: string,
+    email: string,
+    password: string
+  ) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,14 +35,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
   const router = useRouter();
 
-  // Función para verificar si estamos en el navegador
   const isBrowser = typeof window !== "undefined";
 
   useEffect(() => {
-    // Evitar ejecución en el servidor
     if (!isBrowser) return;
 
-    // Intenta recuperar el usuario de localStorage y cookies
     const storedToken = Cookies.get("token") || localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
 
@@ -44,8 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
-      } catch (e) {
-        // Si hay error al parsear el JSON, limpiar los datos
+      } catch {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         Cookies.remove("token");
@@ -65,7 +67,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(user);
       setToken(token);
 
-      // Guardar en localStorage y cookies para que funcione tanto con el cliente como con el middleware
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
       Cookies.set("token", token, { expires: 7 }); // La cookie expira en 7 días
@@ -74,11 +75,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         title: "Inicio de sesión exitoso",
         description: `Bienvenido, ${user.username}!`,
       });
-
-      router.push("/");
-    } catch (error: any) {
+    } catch (error: unknown) {
       const message =
-        error.response?.data?.message || "Error al iniciar sesión";
+        (error as AxiosError<{ message: string }>)?.response?.data?.message ||
+        "Error al iniciar sesión";
       toast({
         title: "Error",
         description: message,

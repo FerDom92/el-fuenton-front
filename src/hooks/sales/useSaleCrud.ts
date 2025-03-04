@@ -25,10 +25,8 @@ export function useSaleCrud(params: PaginationParams) {
     params,
   });
 
-  // Implementar directamente la mutación para crear ventas
   const { mutate: createSale, isPending: isCreating } = useMutation({
     mutationFn: async (data: SaleDTO): Promise<Sale> => {
-      // Formato específico que espera el backend
       const backendData = {
         clientId: data.clientId,
         items: data.items.map(item => ({
@@ -40,7 +38,6 @@ export function useSaleCrud(params: PaginationParams) {
 
       console.log("Enviando datos al backend (formato ajustado):", JSON.stringify(backendData, null, 2));
 
-      // Intento directamente con Axios para tener más control
       const response = await baseApi.post(ENDPOINT, backendData, {
         headers: {
           'Content-Type': 'application/json'
@@ -56,14 +53,14 @@ export function useSaleCrud(params: PaginationParams) {
       });
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error al crear venta",
-        description: error?.message || error?.response?.data?.message || "Ha ocurrido un error al registrar la venta",
+        description: error instanceof Error ? error.message : "Ha ocurrido un error al registrar la venta",
         variant: "destructive",
       });
       console.error("Error detallado:", error);
-      console.error("Respuesta del servidor:", error?.response?.data);
+      console.error("Respuesta del servidor:", (error as { response?: { data?: unknown } })?.response?.data);
     }
   });
 

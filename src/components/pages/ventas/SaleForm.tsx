@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Combobox, ComboboxOption } from "@/components/ui/Combobox";
 import {
   Form,
   FormControl,
@@ -10,15 +11,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useClientCrud } from "@/hooks/clients/useClientsCrud";
-import { useProductCrud } from "@/hooks/products/useProductCrud";
+import { useClientSearch } from "@/hooks/clients/useClientSearch";
+import { useProductSearch } from "@/hooks/products/useProductSearch";
 import { SaleDTO } from "@/types/sale.types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, X } from "lucide-react";
@@ -34,6 +28,7 @@ interface CartItem {
   // Estos campos son solo para la UI
   unitPrice?: number;
   total?: number;
+  productName?: string;
 }
 
 const saleSchema = z.object({
@@ -47,28 +42,41 @@ interface SaleFormProps {
 
 export function SaleForm({ onSubmit, onCancel }: SaleFormProps) {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<number | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
   const [totalAmount, setTotalAmount] = useState<number>(0);
 
-  const { clients } = useClientCrud({
-    page: 1,
-    limit: 100,
-  });
+  // Search states
+  const [clientSearchQuery, setClientSearchQuery] = useState("");
+  const [productSearchQuery, setProductSearchQuery] = useState("");
 
-  const { products } = useProductCrud({
-    page: 1,
-    limit: 100,
-  });
+  // Use the custom hooks for searching
+  const { clients, isLoading: isLoadingClients } =
+    useClientSearch(clientSearchQuery);
+
+  const { products, isLoading: isLoadingProducts } =
+    useProductSearch(productSearchQuery);
+
+  // Convert clients to combobox options
+  const clientOptions: ComboboxOption[] = clients.map((client) => ({
+    label: `${client.name} ${client.lastName} (${client.email})`,
+    value: client.id.toString(),
+  }));
+
+  // Convert products to combobox options
+  const productOptions: ComboboxOption[] = products.map((product) => ({
+    label: `${product.name} ($${product.price.toFixed(2)})`,
+    value: product.id.toString(),
+  }));
 
   const form = useForm<z.infer<typeof saleSchema>>({
     resolver: zodResolver(saleSchema),
     defaultValues: {
-      clientId: clients.length > 0 ? clients[0]?.id || 1 : 1,
+      clientId: 1, // Default client ID
     },
   });
 
-  // Actualizar el cliente por defecto cuando se cargan los clientes
+  // Set the default client when clients are loaded
   useEffect(() => {
     if (clients.length > 0 && !form.getValues().clientId) {
       form.setValue("clientId", clients[0]?.id || 1);
@@ -78,15 +86,18 @@ export function SaleForm({ onSubmit, onCancel }: SaleFormProps) {
   const addItem = () => {
     if (!selectedProduct) return;
 
-    const product = products.find((p) => p.id === selectedProduct);
+    const productId = parseInt(selectedProduct);
+    const product = products.find((p) => p.id === productId);
+
     if (!product) return;
 
     const newItem: CartItem = {
-      productId: selectedProduct,
+      productId,
       quantity: quantity,
       unitPrice: product.price,
       total: product.price * quantity,
       uniqueId: Date.now().toString() + Math.random().toString(36).substr(2, 9), // ID único
+      productName: product.name,
     };
 
     const updatedItems = [...items, newItem];
@@ -100,7 +111,7 @@ export function SaleForm({ onSubmit, onCancel }: SaleFormProps) {
     setTotalAmount(newTotal);
 
     // Limpiar selección
-    setSelectedProduct(null);
+    setSelectedProduct("");
     setQuantity(1);
   };
 
@@ -137,8 +148,11 @@ export function SaleForm({ onSubmit, onCancel }: SaleFormProps) {
       total: totalAmount,
     };
 
-    console.log("Enviando venta (datos simplificados):", saleData);
     onSubmit(saleData);
+  };
+
+  const handleClientChange = (value: string) => {
+    form.setValue("clientId", parseInt(value));
   };
 
   return (
@@ -153,27 +167,18 @@ export function SaleForm({ onSubmit, onCancel }: SaleFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Cliente</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(parseInt(value))}
-                value={field.value?.toString()}
-                defaultValue={field.value?.toString()}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar cliente" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem
-                      key={`client_${client.id}`}
-                      value={client.id.toString()}
-                    >
-                      {client.name} {client.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <Combobox
+                  options={clientOptions}
+                  value={field.value.toString()}
+                  onValueChange={handleClientChange}
+                  onSearch={setClientSearchQuery}
+                  placeholder="Seleccionar cliente"
+                  searchPlaceholder="Buscar cliente..."
+                  emptyMessage="No se encontraron clientes"
+                  isLoading={isLoadingClients}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -182,42 +187,37 @@ export function SaleForm({ onSubmit, onCancel }: SaleFormProps) {
         <div className="border p-4 rounded-md space-y-4">
           <div className="text-sm font-medium">Productos</div>
 
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Select
-                onValueChange={(value) => setSelectedProduct(parseInt(value))}
-                value={selectedProduct?.toString() || ""}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar producto" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products.map((product) => (
-                    <SelectItem
-                      key={`product_${product.id}`}
-                      value={product.id.toString()}
-                    >
-                      {product.name} (${product.price})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="space-y-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <Combobox
+                  options={productOptions}
+                  value={selectedProduct}
+                  onValueChange={(value) => setSelectedProduct(value)}
+                  onSearch={setProductSearchQuery}
+                  placeholder="Seleccionar producto"
+                  searchPlaceholder="Buscar producto..."
+                  emptyMessage="No se encontraron productos"
+                  isLoading={isLoadingProducts}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                  className="w-24"
+                />
+                <Button
+                  type="button"
+                  onClick={addItem}
+                  disabled={!selectedProduct}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <Input
-              type="number"
-              min="1"
-              value={quantity}
-              onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-              className="w-24"
-            />
-            <Button
-              type="button"
-              size="sm"
-              onClick={addItem}
-              disabled={!selectedProduct}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
           </div>
 
           {items.length === 0 && (
@@ -239,33 +239,28 @@ export function SaleForm({ onSubmit, onCancel }: SaleFormProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item) => {
-                    const product = products.find(
-                      (p) => p.id === item.productId
-                    );
-                    return (
-                      <tr key={`item_${item.uniqueId}`} className="border-t">
-                        <td className="p-2">{product?.name}</td>
-                        <td className="p-2 text-right">
-                          ${item.unitPrice?.toFixed(2)}
-                        </td>
-                        <td className="p-2 text-right">{item.quantity}</td>
-                        <td className="p-2 text-right">
-                          ${item.total?.toFixed(2)}
-                        </td>
-                        <td className="p-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeItem(item.uniqueId)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {items.map((item) => (
+                    <tr key={`item_${item.uniqueId}`} className="border-t">
+                      <td className="p-2">{item.productName}</td>
+                      <td className="p-2 text-right">
+                        ${item.unitPrice?.toFixed(2)}
+                      </td>
+                      <td className="p-2 text-right">{item.quantity}</td>
+                      <td className="p-2 text-right">
+                        ${item.total?.toFixed(2)}
+                      </td>
+                      <td className="p-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeItem(item.uniqueId)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
                   <tr className="border-t font-medium">
                     <td className="p-2" colSpan={3}>
                       Total

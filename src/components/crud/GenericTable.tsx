@@ -17,7 +17,7 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { Pencil, Trash } from "lucide-react";
+import { Eye, Trash } from "lucide-react";
 
 export interface ColumnConfig<T> {
   accessor: any;
@@ -32,6 +32,7 @@ interface GenericTableProps<T extends BaseEntity> {
   isLoading: boolean;
   onEdit: (id: number) => void;
   onDelete: (id: number) => void;
+  renderActionCell?: (row: T) => React.ReactNode;
 }
 
 export function GenericTable<T extends BaseEntity>({
@@ -40,6 +41,7 @@ export function GenericTable<T extends BaseEntity>({
   isLoading,
   onEdit,
   onDelete,
+  renderActionCell,
 }: GenericTableProps<T>) {
   const columnHelper = createColumnHelper<T>();
 
@@ -64,24 +66,27 @@ export function GenericTable<T extends BaseEntity>({
     ),
     columnHelper.accessor("id" as any, {
       id: "actions",
-      cell: (info) => (
-        <div className="flex space-x-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onEdit(info.getValue() as number)}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onDelete(info.getValue() as number)}
-          >
-            <Trash className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
+      cell: (info) =>
+        renderActionCell ? (
+          renderActionCell(info.row.original)
+        ) : (
+          <div className="flex space-x-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit(info.getValue() as number)}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(info.getValue() as number)}
+            >
+              <Trash className="h-4 w-4" />
+            </Button>
+          </div>
+        ),
       header: () => <span>Acciones</span>,
       size: 15,
     }),

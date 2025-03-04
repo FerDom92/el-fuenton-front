@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/auth-context";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function RegisterPage() {
   const [username, setUsername] = useState("");
@@ -25,11 +25,31 @@ export default function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { register, isAuthenticated } = useAuth();
   const router = useRouter();
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
-  // Redirect if already logged in
-  if (isAuthenticated) {
-    router.push("/");
-    return null;
+  // Check authentication status once when component mounts
+  useEffect(() => {
+    // Timeout to ensure consistent behavior
+    const timer = setTimeout(() => {
+      setHasCheckedAuth(true);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Handle redirect if already logged in
+  useEffect(() => {
+    if (hasCheckedAuth && isAuthenticated) {
+      router.push("/");
+    }
+  }, [hasCheckedAuth, isAuthenticated, router]);
+
+  if (!hasCheckedAuth || isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Cargando...</p>
+      </div>
+    );
   }
 
   const validatePassword = () => {
@@ -55,6 +75,9 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
+      if (!register) {
+        throw new Error("Registration function is not available");
+      }
       await register(username, email, password);
     } catch (error) {
       console.log(error);

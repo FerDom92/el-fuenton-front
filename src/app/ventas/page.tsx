@@ -9,6 +9,7 @@ import { useSaleCrud } from "@/hooks/sales/useSaleCrud";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Sale, SaleDTO } from "@/types/sale.types";
 import { format } from "date-fns";
+import { Eye, Trash } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
@@ -22,7 +23,7 @@ export default function SalesPage() {
 
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { sales, totalPages, isLoading, isError, createSale, deleteSale } =
@@ -60,7 +61,7 @@ export default function SalesPage() {
       accessor: "items",
       header: "Items",
       cell: (value) => {
-        const items = value as any[];
+        const items = value as Sale[];
         return items ? items.length : 0;
       },
       size: 10,
@@ -75,12 +76,11 @@ export default function SalesPage() {
 
   const handleAdd = () => setIsAddDialogOpen(true);
 
-  const handleEdit = (id: number) => {
-    console.log("Editando venta con ID:", id);
-    const saleToEdit = sales.find((s: Sale) => s.id === id);
-    if (saleToEdit) {
-      setSelectedSale(saleToEdit);
-      setIsEditDialogOpen(true);
+  const handleView = (id: number) => {
+    const saleToView = sales.find((s: Sale) => s.id === id);
+    if (saleToView) {
+      setSelectedSale(saleToView);
+      setIsViewDialogOpen(true);
     }
   };
 
@@ -100,22 +100,10 @@ export default function SalesPage() {
         clientId: Number(data.clientId) || 1,
       };
 
-      console.log("Creando venta:", saleData);
       createSale(saleData);
       setIsAddDialogOpen(false);
     } catch (error) {
       console.error("Error al crear venta:", error);
-    }
-  };
-
-  const handleEditSubmit = (data: SaleDTO) => {
-    try {
-      // Para la edición, podríamos implementar esto más adelante
-      console.log("Editando venta:", data);
-      // Por ahora, solo cerramos el diálogo
-      setIsEditDialogOpen(false);
-    } catch (error) {
-      console.error("Error al editar venta:", error);
     }
   };
 
@@ -126,6 +114,23 @@ export default function SalesPage() {
     }
   };
 
+  const renderActionCell = (sale: Sale) => (
+    <div className="flex space-x-1">
+      <button
+        className="p-2 rounded-md hover:bg-accent"
+        onClick={() => handleView(sale.id)}
+      >
+        <Eye className="h-4 w-4" />
+      </button>
+      <button
+        className="p-2 rounded-md hover:bg-accent"
+        onClick={() => handleDelete(sale.id)}
+      >
+        <Trash className="h-4 w-4" />
+      </button>
+    </div>
+  );
+
   return (
     <CrudPageLayout
       title="Ventas"
@@ -135,16 +140,17 @@ export default function SalesPage() {
       totalPages={totalPages}
       searchValue={search}
       onAddClick={handleAdd}
-      onEditClick={handleEdit}
+      onEditClick={handleView}
       onDeleteClick={handleDelete}
-      searchPlaceholder="Buscar ventas..."
-      renderTable={({ entities, isLoading, onEdit, onDelete }) => (
+      searchPlaceholder="Buscar ventas por cliente o número..."
+      renderTable={({ entities, isLoading }) => (
         <GenericTable
           data={entities}
           columns={saleColumns}
           isLoading={isLoading}
-          onEdit={onEdit}
-          onDelete={onDelete}
+          onEdit={handleView}
+          onDelete={handleDelete}
+          renderActionCell={renderActionCell}
         />
       )}
     >
@@ -160,9 +166,9 @@ export default function SalesPage() {
       </GenericDialog>
 
       <GenericDialog
-        title="Ver Detalles de Venta"
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
+        title="Detalle de Venta"
+        open={isViewDialogOpen}
+        onOpenChange={setIsViewDialogOpen}
       >
         {selectedSale && (
           <div className="py-4">
@@ -220,7 +226,7 @@ export default function SalesPage() {
             <div className="flex justify-end mt-4">
               <Button
                 variant="outline"
-                onClick={() => setIsEditDialogOpen(false)}
+                onClick={() => setIsViewDialogOpen(false)}
                 className="mt-4"
               >
                 Cerrar
@@ -241,7 +247,7 @@ export default function SalesPage() {
   );
 }
 
-// Definición de Button para el modal de detalles
+// Button component for the view dialog
 function Button({
   children,
   variant = "default",
